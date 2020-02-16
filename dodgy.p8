@@ -5,6 +5,8 @@ function _init()
 	make_player()
 	make_enemies()
 	make_gate()
+	rnd_rocks()
+	rnd_flowers()
 end
 
 
@@ -16,7 +18,9 @@ function _update()
  	flag_player_move()
  	move_enemies()
  	bounce_enemies()
- 	detect_col_pe()
+ 	detect_col_pe() --player/enemy
+ 	detect_col_er() --enemy/rock
+ 	detect_col_pr() --player/rock
  	reach_gate()
 	end
 end
@@ -28,6 +32,8 @@ function _draw()
  draw_gate()
 	draw_player()
 	draw_enemies()
+	draw_rocks()
+	draw_flowers()
 	messages()
 	show_debug()
 end
@@ -41,6 +47,9 @@ function make_player()
 	player.w=8
 	player.h=8
 	player.speed=2
+	player.dirx="n"
+	player.diry="n"
+	player.stun=false
 	player.cur_spr=1
 	player.is_moving=false
 end
@@ -51,21 +60,25 @@ function move_player()
 	if btn(1) then
 		if player.x<120 then
 			player.x+=player.speed
+			player.dirx="r"
 		end
 	end
 	if btn(0) then
 		if player.x>0 then
 			player.x-=player.speed
+			player.dirx="l"
 		end
 	end
 	if btn(2) then
 		if player.y>0 then
 			player.y-=player.speed
+			player.diry="u"
 		end
 	end
 	if btn(3) then
 		if player.y<120 then
 			player.y+=player.speed
+			player.diry="d"
 		end
 	end
 end
@@ -120,7 +133,7 @@ end
 
 -->8
 --game
-level=1
+level=3
 game_over=false
 anim_loop=0
 escaped=false
@@ -191,6 +204,89 @@ function messages()
 end
 
 
+flower_count=0
+max_flowers=flr(rnd(4))
+flowers={}
+function rnd_flowers()
+	while flower_count<max_flowers do
+ 	flower={}
+ 	flower.x=flr(rnd(119))
+  flower.y=flr(rnd(80))
+  flower.w=8
+  flower.h=8
+  flower_count+=1
+  add(flowers, flower)
+ end
+end
+function draw_flowers()
+	for key, flower in pairs(flowers) do
+ 	spr(8,flower.x,flower.y)
+	end
+end
+
+
+rock_count=0
+max_rocks=flr(rnd(4))
+rocks={}
+function rnd_rocks()
+	while rock_count<max_rocks do
+ 	rock={}
+ 	rock.x=flr(rnd(119))
+  rock.y=flr(rnd(80))
+  rock.w=8
+  rock.h=8
+  rock_count+=1
+  add(rocks, rock)
+ end
+end
+function draw_rocks()
+	for key, rock in pairs(rocks) do
+ 	spr(7,rock.x,rock.y)
+	end
+end
+
+
+function detect_col_er()
+ for key, enemy in pairs(enemies) do
+ 	for key, rock in pairs(rocks) do
+  	if detect_col(enemy,rock) then
+  		if enemy.dirx=="l" then
+   		enemy.dirx="r"
+  		elseif enemy.dirx=="r" then
+   		enemy.dirx="l"
+   	end
+   	if enemy.diry=="u" then
+   		enemy.diry="d"
+   	elseif enemy.diry=="d" then
+   		enemy.diry="u"
+   	end
+  	end
+ 	end
+ end
+end
+
+
+function detect_col_pr()
+	for key, rock in pairs(rocks) do
+ 	if detect_col(player,rock) then
+ 		player.stun=true
+ 		if btn(1) then
+ 			player.x-=5
+ 		end
+ 		if btn(0) then
+ 		 player.x+=5
+ 		end
+ 		if btn(2) then
+ 			player.y+=5
+ 		end
+ 		if btn(3) then
+ 			player.y-=5
+ 		end
+ 	end
+	end
+end
+
+
 function show_debug()
 	color(6)
 	--player coords
@@ -202,6 +298,9 @@ function show_debug()
 	print("moving:"..(player.is_moving and "true" or "false"),0,18,6)
 	print("escape:"..(escaped and "true" or "false"),0,24,6)
 	print("game_over:"..(game_over and "true" or "false"),0,30,6)
+ print("blocked "..(blocked and "true" or "false"),0,36,6)
+	print("direction "..player.diry,0,42,6)
+	print("direction "..player.dirx,0,48,6)
 end
 
 -->8
@@ -230,7 +329,7 @@ function make_enemies()
  	else
  		enemy.diry="d"
  	end
- 	enemy.speed="2"
+ 	enemy.speed="1"
  	--add enemy to count
  	enemy_count+=1
  	--add to enemies object
@@ -281,15 +380,39 @@ function draw_enemies()
 	end
 end
 
+-->8
+--todo
+
+--stun state, 2 seconds?
+
+--stun state animation
+
+--check mice and rocks don't
+--clash / get stuck
+
+--sound!
+
+--title screen
+
+--load new levels when goal reached
+
+--better fence graphic
+
+--better hit boxes needed
+--define them as an attribute?
+--maybe better to do maths
+--in col detection
+
+--animate enemies
 __gfx__
-000000000005500000000000000550f00f0550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000ff00000055000000ff020020ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0070070000222200000ff000022222200222222000e6660000e66600000000000000000000000000000000000000000000000000000000000000000000000000
-00077000020220200022220002022000000220200e6666a60e6666a6000000000000000000000000000000000000000000000000000000000000000000000000
-0007700002044020020220200f044000000440f0e0666666e0666666000000000000000000000000000000000000000000000000000000000000000000000000
-007007000f0cc0f002044020000ccc0000ccc0000006006000600600000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000cc0000f0cc0f0000c0c0000c0c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000440000004400000040400004040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000005500000000000000550f00f055000000000000000000000055500000aaa0000000000000000000000000000000000000000000000000000000000
+00000000000ff00000055000000ff020020ff00000000000000000000055555000aaaaa000000000000000000000000000000000000000000000000000000000
+0070070000222200000ff000022222200222222000e6660000e666000565555000aa9aa000000000000000000000000000000000000000000000000000000000
+00077000020220200022220002022000000220200e6666a60e6666a60555665000aaaaa000000000000000000000000000000000000000000000000000000000
+0007700002044020020220200f044000000440f0e0666666e066666655555655000aaa0000000000000000000000000000000000000000000000000000000000
+007007000f0cc0f002044020000ccc0000ccc0000006006000600600555555550000b00000000000000000000000000000000000000000000000000000000000
+00000000000cc0000f0cc0f0000c0c0000c0c00000000000000000005655555500b0b0b000000000000000000000000000000000000000000000000000000000
+0000000000044000000440000004040000404000000000000000000055555555000bbb0000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
