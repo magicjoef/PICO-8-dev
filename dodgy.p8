@@ -3,32 +3,37 @@ version 16
 __lua__
 function _init()
 	make_player()
-	make_enemy_1()
+	make_enemies()
 	make_gate()
 end
 
+
 function _update()
-	anim_loop_adv()
-	player_anim()
-	move_player()
-	move_enemy_1()
-	bounce_enemy_1()
-	reach_gate()
-	flag_movement()
-	detect_col()
+	if game_over==false then
+ 	anim_loop_adv()
+ 	player_anim()
+ 	move_player()
+ 	flag_player_move()
+ 	move_enemies()
+ 	bounce_enemies()
+ 	detect_col_pe()
+ 	reach_gate()
+	end
 end
+
 
 function _draw()
  cls()
  draw_map()
+ draw_gate()
 	draw_player()
-	draw_enemy_1()
-	draw_gate()
+	draw_enemies()
 	messages()
 	show_debug()
 end
+
 -->8
--- player
+--player
 function make_player()
 	player={}
 	player.x=63
@@ -39,6 +44,44 @@ function make_player()
 	player.cur_spr=1
 	player.is_moving=false
 end
+
+
+function move_player()
+	--includes boundary check
+	if btn(1) then
+		if player.x<120 then
+			player.x+=player.speed
+		end
+	end
+	if btn(0) then
+		if player.x>0 then
+			player.x-=player.speed
+		end
+	end
+	if btn(2) then
+		if player.y>0 then
+			player.y-=player.speed
+		end
+	end
+	if btn(3) then
+		if player.y<120 then
+			player.y+=player.speed
+		end
+	end
+end
+
+
+function flag_player_move()
+ if btn(0)
+ 		or btn(1)
+ 		or btn(2)
+ 		or btn(3) then
+ 	player.is_moving=true
+ else
+ 	player.is_moving=false
+ end
+end
+
 
 function player_anim()
 	if player.is_moving==false then
@@ -62,43 +105,11 @@ function player_anim()
  end
 end
 
-function move_player()
-	if btn(1) then
-		if player.x < 120 then
-			player.x+=player.speed
-		end
-	end
-	if btn(0) then
-		if player.x > 0 then
-			player.x-=player.speed
-		end
-	end
-	if btn(2) then
-		if player.y > 0 then
-			player.y-=player.speed
-		end
-	end
-	if btn(3) then
-		if player.y < 120 then
-			player.y+=player.speed
-		end
-	end
-end
-
-function flag_movement()
- if btn(0)
- 		or btn(1)
- 		or btn(2)
- 		or btn(3) then
- 	player.is_moving=true
- else
- 	player.is_moving=false
- end
-end
 
 function draw_player()
 	 spr(player.cur_spr, player.x, player.y)
 end
+
 -->8
 --map
 function draw_map()
@@ -106,22 +117,24 @@ function draw_map()
 	map(0,0,0,0,16,8)
 	map(0,0,0,64,16,8)
 end
+
 -->8
 --game
+level=1
 game_over=false
-hits=0
-colx=false
-coly=false
 anim_loop=0
+escaped=false
+
 
 function anim_loop_adv()
  --time to base player animation
- if anim_loop < 29 then
+ if anim_loop<29 then
  	anim_loop+=1
  else
  	anim_loop=0
  end
 end
+
 
 function make_gate()
 	gate={}
@@ -138,114 +151,136 @@ function draw_gate()
 										4)
 end
 
-escaped=false
+
 function reach_gate()
 	if player.x>=53
 		and player.x<=69
 		and player.y<=4 then
 			escaped=true
-		else
-			escaped=false	
+			game_over=true
 	end
 end
+
+
+function detect_col(a,b)
+	if a.x < b.x + b.w and
+   	a.x + b.w > b.x and
+   	a.y < b.y + b.h and
+   	a.y + b.h > b.y then
+    	return true
+	end
+end
+function detect_col_pe()
+ for key, enemy in pairs(enemies) do
+ 	if detect_col(player,enemy) then
+ 		eaten=true
+ 		game_over=true
+ 	end
+ end
+end
+
 
 function messages()
 	if escaped then
 		print("phew! you made it ⌂",22,70,6)
 	end
+	if eaten then
+		print("eaten by a mouse.",35,50,6)
+		print("		what a way to go!",27,60,6)
+	end
 end
 
-function detect_colx()
-	if
-		player.x>enemy_1.x
-		and
-		player.x<enemy_1.x+enemy_1.w
-	then
-		hits+=1
-		colx=true
-	else
-		colx=false
-	end
-end
-function detect_coly()
-	if
-		player.y>enemy_1.y
-		and
-		player.y<enemy_1.y+enemy_1.h
-	then
-		hits+=1
-		coly=true
-	else
-		coly=false
-	end
-end
-function detect_col()
-	detect_colx()
-	detect_coly()
-	if coly==true and colx==true then
-		game_over=true
-	end
-end
 
 function show_debug()
 	color(6)
-	-- player coords
+	--player coords
 	print("x:"..player.x,0,0,6)
 	print("y:"..player.y,0,6,6)
-	-- game loop counter
+	--game loop counter
 	print("anim loop:"..anim_loop,0,12,6)
-	-- movement flag
+	--movement flag
 	print("moving:"..(player.is_moving and "true" or "false"),0,18,6)
 	print("escape:"..(escaped and "true" or "false"),0,24,6)
 	print("game_over:"..(game_over and "true" or "false"),0,30,6)
-	print("hits:"..hits,0,36,6)
 end
+
 -->8
 --enemies
-function make_enemy_1()
-	enemy_1={}
-	enemy_1.x=60
-	enemy_1.y=30
-	enemy_1.w=8
-	enemy_1.h=8
-	enemy_1.cur_spr=5
-	enemy_1.dirx="r"
-	enemy_1.diry="d"
-	enemy_1.speed="3"
-end
+enemy_count=0
+enemies={}
 
-function move_enemy_1()
-	if enemy_1.dirx=="r" then
-		enemy_1.x+=enemy_1.speed
-	end
-	if enemy_1.dirx=="l" then
-		enemy_1.x-=enemy_1.speed
-	end
-	if enemy_1.diry=="d" then
-		enemy_1.y+=enemy_1.speed
-	end
-	if enemy_1.diry=="u" then
-		enemy_1.y-=enemy_1.speed
-	end
-end
-function bounce_enemy_1()
-	if enemy_1.dirx=="r" and enemy_1.x>=120 then
-		enemy_1.dirx="l"
-	end
-	if enemy_1.dirx=="l" and enemy_1.x<=0 then
-		enemy_1.dirx="r"
-	end
-	if enemy_1.diry=="d" and enemy_1.y>=120 then
-		enemy_1.diry="u"
-	end
-	if enemy_1.diry=="u" and enemy_1.y<=0 then
-		enemy_1.diry="d"
+
+function make_enemies()
+	while enemy_count<level do
+ 	enemy={}
+ 	enemy.x=flr(rnd(119))
+ 	enemy.y=flr(rnd(40))
+ 	enemy.w=8
+ 	enemy.h=8
+ 	enemy.cur_spr=5
+ 	rnd_lr=flr(rnd(2))
+ 	rnd_ud=flr(rnd(2))
+ 	if rnd_lr==0 then
+ 		enemy.dirx="l"
+ 	else
+ 		enemy.dirx="r"
+ 	end
+ 	if rnd_ud==0 then
+ 		enemy.diry="u"
+ 	else
+ 		enemy.diry="d"
+ 	end
+ 	enemy.speed="2"
+ 	--add enemy to count
+ 	enemy_count+=1
+ 	--add to enemies object
+ 	add(enemies, enemy)
 	end
 end
 
-function draw_enemy_1()
- spr(enemy_1.cur_spr,enemy_1.x,enemy_1.y)
+
+function move_enemies()
+ 	for key, enemy in pairs(enemies) do
+  	if enemy.dirx=="r" then
+  		enemy.x+=enemy.speed
+  	end
+  	if enemy.dirx=="l" then
+  		enemy.x-=enemy.speed
+  	end
+  	if enemy.diry=="d" then
+  		enemy.y+=enemy.speed
+  	end
+  	if enemy.diry=="u" then
+  		enemy.y-=enemy.speed
+  	end
+ 	end
 end
+
+
+function bounce_enemies()
+	for key, enemy in pairs(enemies) do
+ 	if enemy.dirx=="r" and enemy.x>=120 then
+ 		enemy.dirx="l"
+ 	end
+ 	if enemy.dirx=="l" and enemy.x<=0 then
+ 		enemy.dirx="r"
+ 	end
+ 	if enemy.diry=="d" and enemy.y>=120 then
+ 		enemy.diry="u"
+ 	end
+ 	if enemy.diry=="u" and enemy.y<=0 then
+ 		enemy.diry="d"
+ 	end
+ end
+end
+
+
+function draw_enemies()
+	for key, enemy in pairs(enemies) do
+ 	spr(enemy.cur_spr,enemy.x,enemy.y)
+	end
+end
+
 __gfx__
 000000000005500000000000000550f00f0550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000ff00000055000000ff020020ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
